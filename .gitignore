@@ -1,0 +1,21 @@
+# Build artifacts
+/dist/
+/bin/
+*.exe
+
+# Local config / state
+config.toml
+.state.json
+.legacy/
+.extra-orgs
+.managed-repos
+.main-org
+.profile-*
+
+# Editor
+.vscode/
+.idea/
+*~
+
+# OS
+.DS_Store

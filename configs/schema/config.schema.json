@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kore-kda-community.github.io/org-bootstrap/config.schema.json",
+  "title": "org-bootstrap config",
+  "type": "object",
+  "properties": {
+    "general": {
+      "type": "object",
+      "properties": {
+        "main_org":          { "type": "string" },
+        "create_visibility": { "enum": ["private", "public"] },
+        "promote_to_public": { "type": "array", "items": { "type": "string" } },
+        "state_path":        { "type": "string" }
+      },
+      "required": ["main_org"]
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "client_id": { "type": "string" },
+        "scopes":    { "type": "array", "items": { "type": "string" } },
+        "store":     { "enum": ["gh-keyring", "file"] }
+      },
+      "required": ["client_id"]
+    },
+    "audit": {
+      "type": "object",
+      "properties": {
+        "rules_path":  { "type": "string" },
+        "fail_closed": { "type": "boolean" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "mode":         { "enum": ["pinned", "curated", "auto"] },
+        "top_n":        { "type": "integer", "minimum": 1, "maximum": 100 },
+        "show_teasers": { "type": "boolean" }
+      }
+    },
+    "tap": {
+      "type": "object",
+      "properties": { "secret_name": { "type": "string" } }
+    }
+  }
+}

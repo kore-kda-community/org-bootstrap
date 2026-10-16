@@ -1,0 +1,53 @@
+version: 2
+
+project_name: {{ .ProjectName }}
+
+before:
+  hooks:
+    - go mod tidy
+    - go build ./...
+
+builds:
+  - id: {{ .ProjectName }}
+    main: {{ .MainPath }}
+    binary: {{ .BinaryName }}
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+      - -X main.version={{ "{{.Version}}" }}
+
+archives:
+  - id: {{ .ProjectName }}
+    formats: [tar.gz]
+    name_template: >-
+      {{ "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}" }}
+    files: [README.md, LICENSE]
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: {{ .Org }}
+    name: releases
+    token: "{{ "{{ .Env.RELEASE_REPO_TOKEN }}" }}"
+  prerelease: auto
+  replace_existing_draft: true
+  use_existing_draft: true
+
+brews:
+  - repository:
+      owner: {{ .Org }}
+      name: homebrew-tap
+      token: "{{ "{{ .Env.HOMEBREW_TAP_TOKEN }}" }}"
+    directory: Formula
+    homepage: "https://github.com/{{ .Org }}/{{ .SourceRepo }}"
+    description: "{{ .Description }}"
+    license: "{{ .License }}"
+    install: |
+      bin.install "{{ .BinaryName }}"
+    test: |
+      system "#{bin}/{{ .BinaryName }}", "--version"

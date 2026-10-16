@@ -1,0 +1,60 @@
+version = 1
+
+[[rules]]
+id       = "github-pat"
+pattern  = 'ghp_[A-Za-z0-9]{36}'
+severity = "critical"
+
+[[rules]]
+id       = "github-fine-pat"
+pattern  = 'github_pat_[A-Za-z0-9_]{82}'
+severity = "critical"
+
+[[rules]]
+id       = "github-oauth"
+pattern  = 'gho_[A-Za-z0-9]{36}'
+severity = "critical"
+
+[[rules]]
+id       = "github-server"
+pattern  = 'ghs_[A-Za-z0-9]{36}'
+severity = "critical"
+
+[[rules]]
+id       = "github-refresh"
+pattern  = 'ghr_[A-Za-z0-9]{36}'
+severity = "critical"
+
+[[rules]]
+id       = "aws-access"
+pattern  = 'AKIA[0-9A-Z]{16}'
+severity = "critical"
+
+[[rules]]
+id       = "aws-temp"
+pattern  = 'ASIA[0-9A-Z]{16}'
+severity = "high"
+
+[[rules]]
+id       = "pem-key"
+pattern  = '-----BEGIN (RSA|EC|DSA|OPENSSH|PGP) PRIVATE KEY-----'
+severity = "critical"
+
+[[rules]]
+id       = "slack"
+pattern  = 'xox[baprs]-[A-Za-z0-9-]{10,}'
+severity = "high"
+
+[[rules]]
+id       = "stripe-live"
+pattern  = 'sk_live_[0-9a-zA-Z]{24,}'
+severity = "critical"
+
+[[rules]]
+id       = "google-api"
+pattern  = 'AIza[0-9A-Za-z_-]{35}'
+severity = "high"
+
+[excludes]
+paths      = [".git/", "node_modules/", "vendor/", "dist/", ".legacy/"]
+extensions = ["lock", "sum", "min.js", "png", "jpg", "jpeg", "gif", "webp", "pdf", "zip", "gz", "tar"]

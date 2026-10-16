@@ -1,0 +1,28 @@
+# Welcome to {{ .Org }}
+
+{{ .Tagline }}
+
+## What We Build
+
+{{ .WhatWeBuild }}
+
+## Repositories of Interest
+
+{{ .RepoList }}
+{{ .TeaserSection }}
+## Download Builds
+
+Binaries for all projects: **https://github.com/{{ .Org }}/releases**
+
+### Homebrew
+
+```bash
+brew trust {{ .Slug }}/tap
+brew tap {{ .Slug }}/tap
+brew install <formula>
+```
+
+## Getting Help
+
+Open an issue in the relevant repository.
+{{ .DevSection }}

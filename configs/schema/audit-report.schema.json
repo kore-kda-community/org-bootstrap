@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kore-kda-community.github.io/org-bootstrap/audit-report.schema.json",
+  "title": "org-audit report",
+  "type": "object",
+  "properties": {
+    "version":    { "const": 1 },
+    "target": {
+      "type": "object",
+      "properties": {
+        "org":        { "type": "string" },
+        "repo":       { "type": "string" },
+        "commit_sha": { "type": "string" }
+      }
+    },
+    "started_at":    { "type": "string", "format": "date-time" },
+    "finished_at":   { "type": "string", "format": "date-time" },
+    "duration_ms":   { "type": "integer" },
+    "clean":         { "type": "boolean" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule_id":       { "type": "string" },
+          "pattern":       { "type": "string" },
+          "file":          { "type": "string" },
+          "line":          { "type": "integer" },
+          "match_preview": { "type": "string" },
+          "severity":      { "type": "string" }
+        },
+        "required": ["rule_id", "file", "line"]
+      }
+    },
+    "scanned_files": { "type": "integer" },
+    "skipped_files": { "type": "integer" }
+  },
+  "required": ["version", "clean", "findings"]
+}

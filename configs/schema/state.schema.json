@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kore-kda-community.github.io/org-bootstrap/state.schema.json",
+  "title": "org-bootstrap state",
+  "type": "object",
+  "properties": {
+    "version":    { "const": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "orgs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "object",
+            "properties": {
+              "pinned_mode":    { "enum": ["include", "ignore"] },
+              "curated_public": { "type": "array", "items": { "type": "string" } },
+              "teasers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "repo": { "type": "string" },
+                    "slug": { "type": "string" }
+                  },
+                  "required": ["repo"]
+                }
+              }
+            }
+          },
+          "managed_repos": { "type": "array", "items": { "type": "string" } },
+          "last_run":      { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "required": ["version", "orgs"]
+}

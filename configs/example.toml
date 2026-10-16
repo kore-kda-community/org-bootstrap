@@ -1,0 +1,32 @@
+# org-bootstrap — configuration
+# Copy to config.toml (or $XDG_CONFIG_HOME/org-bootstrap/config.toml) and edit.
+
+[general]
+main_org          = "kore-kda-community"
+create_visibility = "private"
+promote_to_public = [".github", "releases", "homebrew-tap"]
+state_path        = ".state.json"
+
+[auth]
+client_id = "Ov23li0LMhXrFhF4k8hu"
+scopes    = ["repo", "workflow", "admin:org", "read:org"]
+store     = "gh-keyring"   # gh-keyring | file
+
+[audit]
+rules_path  = "configs/audit-default.toml"
+fail_closed = true
+
+[profile]
+mode         = "pinned"    # pinned | curated | auto
+top_n        = 10
+show_teasers = true
+
+[tap]
+secret_name = "HOMEBREW_TAP_GITHUB_TOKEN"
+
+[orgs]
+extra = []
+
+[log]
+level  = "info"            # debug | info | warn | error
+format = "text"            # text | json

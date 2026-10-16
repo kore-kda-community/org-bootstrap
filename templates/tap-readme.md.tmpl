@@ -1,0 +1,14 @@
+# Homebrew Tap — {{ .Org }}
+
+```bash
+brew trust {{ .Slug }}/tap
+brew tap {{ .Slug }}/tap
+brew install <formula>
+```
+
+Formulae live under `Formula/`. They are updated automatically by GoReleaser
+when a new tag is pushed to the corresponding source repo.
+
+## Available
+
+{{ .FormulaList }}

@@ -1,0 +1,76 @@
+version: 2
+
+project_name: org-bootstrap
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: org-bootstrap
+    main: ./cmd/org-bootstrap
+    binary: org-bootstrap
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+
+  - id: org-audit
+    main: ./cmd/org-audit
+    binary: org-audit
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+
+  - id: org-release
+    main: ./cmd/org-release
+    binary: org-release
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+
+archives:
+  - id: bundle
+    formats: [tar.gz]
+    name_template: "org-bootstrap_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - docs/**
+      - configs/**
+      - templates/**
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: kore-kda-community
+    name: releases
+    token: "{{ .Env.RELEASE_REPO_TOKEN }}"
+  prerelease: auto
+  replace_existing_draft: true
+  use_existing_draft: true
+
+brews:
+  - repository:
+      owner: kore-kda-community
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/kore-kda-community/homebrew-tap-app"
+    description: "Org bootstrapper: create + audit + release pipeline for GitHub orgs"
+    license: "MIT"
+    install: |
+      bin.install "org-bootstrap"
+      bin.install "org-audit"
+      bin.install "org-release"
+    test: |
+      system "#{bin}/org-bootstrap", "-h"
+      system "#{bin}/org-audit", "-h"
+      system "#{bin}/org-release", "-h"
