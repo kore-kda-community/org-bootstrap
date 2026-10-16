@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kore-kda-community/org-bootstrap/internal/config"
 	"github.com/kore-kda-community/org-bootstrap/internal/gh"
@@ -17,7 +18,6 @@ import (
 func Run(ctx context.Context, c *gh.Client, cfg *config.Config, st *state.State) error {
 	// 1. List admin orgs.
 	fmt.Println()
-	fmt.Println("── Organizations ──")
 	orgs, err := c.ListAdminOrgs(ctx)
 	if err != nil {
 		return fmt.Errorf("list orgs: %w", err)
@@ -33,29 +33,17 @@ func Run(ctx context.Context, c *gh.Client, cfg *config.Config, st *state.State)
 
 	// 2. Pick orgs.
 	fmt.Println()
-	for i, n := range names {
-		fmt.Printf("    [%2d] %s\n", i+1, n)
-	}
-	fmt.Println()
-	choice, err := tui.PromptChoice("Process all, or pick numbers", "a", "a", "s", "q")
+	picked, quit, err := tui.PickOrgs("── Organizations ──", names)
 	if err != nil {
 		return err
 	}
-	switch choice {
-	case "q":
+	if quit {
 		return nil
-	case "a":
-		// keep all
-	case "s":
-		picks, err := tui.PickByNumber("", names)
-		if err != nil {
-			return err
-		}
-		names = picks
 	}
-	if len(names) == 0 {
+	if len(picked) == 0 {
 		return fmt.Errorf("no orgs selected")
 	}
+	names = picked
 	fmt.Printf("  ✓ will process %d org(s): %v\n", len(names), names)
 
 	// 3. Main org (asked once).
@@ -90,16 +78,23 @@ func Run(ctx context.Context, c *gh.Client, cfg *config.Config, st *state.State)
 		}
 	}
 
-	// 6. Tap token.
-	fmt.Println()
-	fmt.Println("── Homebrew tap token ──")
-	token, err := tui.PromptSecret("Homebrew tap token")
-	if err != nil {
-		return err
+	// 6. Tap token. Silent lookup in priority order. Never prompts unless
+	// there's genuinely nothing available — which shouldn't happen because
+	// main.go exports GH_TOKEN after auth.
+	token := lookupStoredTapToken(st)
+	if token == "" {
+		token = os.Getenv("HOMEBREW_TAP_GITHUB_TOKEN")
 	}
 	if token == "" {
-		return fmt.Errorf("tap token is required")
+		token = os.Getenv("GH_TOKEN")
 	}
+	if token == "" {
+		token = os.Getenv("GITHUB_TOKEN")
+	}
+	if token == "" {
+		return fmt.Errorf("no tap token available — set HOMEBREW_TAP_GITHUB_TOKEN or run `gh auth login`")
+	}
+	fmt.Println("  ✓ tap token ready")
 
 	// 7. Confirm.
 	fmt.Println()
@@ -123,14 +118,16 @@ func Run(ctx context.Context, c *gh.Client, cfg *config.Config, st *state.State)
 	return nil
 }
 
-// curate prompts for public repo picks and teasers for one org, saving into
-// state. Prompts are skipped if the org already has curation.
+// curate runs the interactive teaser/pick editor for one org. Mirrors
+// bootstrap.sh's edit_teasers_for_org: shows existing picks with [+] marks,
+// supports "-" to clear, preserves slugs on Enter, and applies replace
+// semantics.
 func curate(ctx context.Context, c *gh.Client, st *state.State, org string) error {
 	os := st.Get(org)
 
-	// Public picks
+	// ---- Public repo cherry-pick (optional) ----
 	fmt.Println()
-	fmt.Println("── Public repos for", org, "──")
+	fmt.Println("── Public repos for " + org + " ──")
 	edit, err := tui.PromptYN("Cherry-pick public repos for the profile?", false)
 	if err != nil {
 		return err
@@ -151,35 +148,101 @@ func curate(ctx context.Context, c *gh.Client, st *state.State, org string) erro
 		os.Profile.CuratedPublic = picked
 	}
 
-	// Teasers
-	fmt.Println()
-	fmt.Println("── In Development teasers for", org, "──")
+	// ---- Teasers ----
 	privs, err := c.ListPrivateRepoNames(ctx, org)
 	if err != nil {
 		return err
 	}
-	if len(privs) > 0 {
-		tease, err := tui.PromptYN("Add private repos to the In Development section?", false)
+	if len(privs) == 0 {
+		st.Put(org, os)
+		return nil
+	}
+
+	// Build the current set: repo name -> slug.
+	current := map[string]string{}
+	for _, t := range os.Profile.Teasers {
+		current[t.Repo] = t.Slug
+	}
+
+	fmt.Println()
+	fmt.Println("── In Development teasers for " + org + " ──")
+	fmt.Println("  Private repos you can tease in the org profile.")
+	fmt.Println("  Shown as name or custom slug only — no links, no descriptions.")
+	fmt.Println()
+	for i, name := range privs {
+		mark := " "
+		if _, ok := current[name]; ok {
+			mark = "\033[32m+\033[0m"
+		}
+		fmt.Printf("    [%2d] %s %s\n", i+1, mark, name)
+	}
+	fmt.Println()
+	fmt.Println("  Numbers to add (e.g. '1 3 5'), - to clear all, Enter to keep current.")
+
+	line, err := tui.PromptString("  Selection", "")
+	if err != nil {
+		return err
+	}
+	line = strings.TrimSpace(line)
+
+	// Empty → keep current set unchanged.
+	if line == "" {
+		st.Put(org, os)
+		return nil
+	}
+
+	// "-" → clear all teasers for this org.
+	if line == "-" {
+		os.Profile.Teasers = nil
+		st.Put(org, os)
+		fmt.Printf("  ✓ cleared %s teasers\n", org)
+		return nil
+	}
+
+	// Otherwise parse numbers and build the replacement set.
+	nums, err := tui.ParseNumericPick(line)
+	if err != nil {
+		return err
+	}
+	var picked []string
+	for _, n := range nums {
+		if n >= 1 && n <= len(privs) {
+			picked = append(picked, privs[n-1])
+		}
+	}
+	if len(picked) == 0 {
+		fmt.Println("  ! no valid picks — keeping current set")
+		st.Put(org, os)
+		return nil
+	}
+
+	// Prompt for slugs, preserving any existing slug on Enter.
+	os.Profile.Teasers = nil
+	for _, name := range picked {
+		existing := current[name]
+		hint := ""
+		if existing != "" && existing != name {
+			hint = fmt.Sprintf(" (current: %s)", existing)
+		}
+		slug, err := tui.PromptString(fmt.Sprintf("    %s slug%s", name, hint), existing)
 		if err != nil {
 			return err
 		}
-		if tease {
-			picked, err := tui.PickByNumber("", privs)
-			if err != nil {
-				return err
-			}
-			// Replace semantics
-			os.Profile.Teasers = nil
-			for _, name := range picked {
-				slug, err := tui.PromptString(fmt.Sprintf("    %s slug (blank = repo name)", name), "")
-				if err != nil {
-					return err
-				}
-				os.Profile.Teasers = append(os.Profile.Teasers, state.Teaser{Repo: name, Slug: slug})
-			}
-		}
+		os.Profile.Teasers = append(os.Profile.Teasers, state.Teaser{Repo: name, Slug: slug})
 	}
 
 	st.Put(org, os)
+	fmt.Printf("  ✓ %s: %d teaser(s) selected (replaced)\n", org, len(picked))
 	return nil
+}
+
+// lookupStoredTapToken returns any previously saved tap token from state.
+// Processes multiple orgs in one run, so this returns the first one found.
+func lookupStoredTapToken(st *state.State) string {
+	for _, o := range st.Orgs {
+		if o.TapToken != "" {
+			return o.TapToken
+		}
+	}
+	return ""
 }

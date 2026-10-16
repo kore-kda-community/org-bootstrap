@@ -73,6 +73,10 @@ func run(cfgPath, statePath, migrateDir string) error {
 		return fmt.Errorf("auth: %w", err)
 	}
 
+	// Export the token so downstream steps (bootstrap, release) can reuse
+	// it as a fallback when no explicit tap token is provided.
+	os.Setenv("GH_TOKEN", token)
+
 	c, err := gh.New(ctx, token)
 	if err != nil {
 		return err
